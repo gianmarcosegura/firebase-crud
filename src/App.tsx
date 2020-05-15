@@ -4,7 +4,9 @@ import firebase from './firebase.js';
 function App() {
 
   const [taskList, setTaskList] = useState<any[]>([]);
-  const [task, setTask] = useState('');
+  const [task, setTask] = useState<string>('');
+  const [editionMode, setEditionMode] = useState<boolean>(false);
+  const [taskId, setTaskId] = useState<string>('');
 
   useEffect(() => {
 
@@ -77,8 +79,34 @@ function App() {
 
   }
 
-  const editTask = async (item: any) => {
+  const editTask = async (e: any) => {
 
+    e.preventDefault()
+
+    if(!task.trim()){
+      return
+    }
+    try {
+      const db = firebase.firestore()
+      await db.collection('tareas').doc(taskId).update({
+        nombre: task
+      })
+      const arrayEditado = taskList.map(item => (
+        item.id === taskId ? {id: item.id, fecha: item.fecha, nombre: task} : item
+      ))
+      setTaskList(arrayEditado)
+      setEditionMode(false)
+      setTaskId('')
+      setTask('')
+    } catch (error) {
+      console.log(error)
+    }
+}
+
+  const activeEditionMode = async (item: any) => {
+    setEditionMode(true)
+    setTask(item.nombre)
+    setTaskId(item.id)
   }
 
   return (
@@ -95,13 +123,13 @@ function App() {
                     className="btn btn-danger btn-sm float-right"
                     onClick={() => deleteTask(item.id)}
                   >
-                    Eliminar
+                    Delete
                   </button>
                   <button
                     className="btn btn-warning btn-sm float-right mr-2"
-                    onClick={() => editTask(item)}
+                    onClick={() => activeEditionMode(item)}
                   >
-                    Editar
+                    Edit
                   </button>
 
                 </li>
@@ -110,21 +138,31 @@ function App() {
           </div>
         </div>
         <div className="col-6">
-        <h2 className="text-center mb-3">Form</h2>
-        <form onSubmit={ (event) => addTask(event) }>
-          <input
-            type="text"
-            placeholder="Write your Task"
-            className="form-control mb-2"
-            onChange={ (e) => setTask(e.target.value) }
-            value={ task }/>
+            <h2 className="text-center mb-3">
+            {
+              editionMode ? 'Edit Task' : 'Add Task'
+            }
+            </h2>
+            <form onSubmit={ editionMode ? editTask : addTask }>
+            <input
+                type="text"
+                placeholder="Write your Task"
+                className="form-control mb-2"
+                value={ task }
+                onChange={e => setTask(e.target.value)}
+            />
             <button
-              className="btn btn-dark btn-block"
-              type="submit"
+              type='submit'
+              className= {
+                editionMode ? 'btn btn-warning btn-block btn-sm' :
+                'btn btn-dark btn-block btn-sm'
+              }
             >
-              Add
+              {
+                editionMode ? 'Edit' : 'Add'
+              }
             </button>
-        </form>
+            </form>
         </div>
       </div>
     </div>
